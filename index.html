@@ -11,6 +11,34 @@
         main {
             margin: 20px;
         }
+        h2 {
+            position: relative;
+            line-height: 1.4;
+            padding: 0.25em 1em;
+            display: inline-block;
+        }
+
+            h2:before, h2:after {
+                content: '';
+                width: 20px;
+                height: 30px;
+                position: absolute;
+                display: inline-block;
+            }
+
+            h2:before {
+                border-left: solid 1px darkkhaki;
+                border-top: solid 1px darkkhaki;
+                top: 0;
+                left: 0;
+            }
+
+            h2:after {
+                border-right: solid 1px darkkhaki;
+                border-bottom: solid 1px darkkhaki;
+                bottom: 0;
+                right: 0;
+            }
 
         /* 代理ボタン */
         .file-button {
@@ -24,7 +52,7 @@
         }
 
             .file-button:hover {
-                background-color: darkkhaki;
+                background-color: olive;
                 transition: all 0.4s;
             }
 
@@ -60,6 +88,9 @@
     </style>
 </head>
 <body>
+    <header>
+        <h2>ココフォリア全ログ振り分けβ</h2>
+    </header>
     <main>
         <article>
             <div id="attachment">

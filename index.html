@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ja" xml:lang="ja" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="keywords" content="" />
+    <meta name="description" content="" />
+    <title>ココフォリア全ログ振り分けβ</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <style>
+        main {
+            margin: 20px;
+        }
+
+        /* 代理ボタン */
+        .file-button {
+            display: inline-block;
+            position: relative;
+            background-color: darkkhaki;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+            .file-button:hover {
+                background-color: darkkhaki;
+                transition: all 0.4s;
+            }
+
+        /* ファイルinput非表示 */
+        .file-input {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 代理ファイル名表示 */
+        .file-name {
+            margin: 0 0 0 10px;
+        }
+
+        /* ダウンロードファイルリスト */
+        .download-link {
+            list-style: none;
+        }
+
+        .link {
+            color: olive;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            color: white;
+            background-color: darkkhaki;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <article>
+            <div id="attachment">
+                <label class="file-button"><input type="file" name="ファイル添付" class="file-input" id="fileInput" onchange="fileChanged(event)" accept="text/html">ファイルを添付する</label>
+                <label class="file-name" id="fileNm">選択されていません</label>
+            </div>
+            <pre id="pre1"></pre>
+            <ol>
+                <li>全ログファイルを選択してください</li>
+                <li>各タブごとにリンクが下記に作成されます。リンククリックでダウンロードします。</li>
+            </ol>
+            <label id="message"></label>
+            <ul class="download-link" id="downloadList">
+            </ul>
+        </article>
+    </main>
+    <footer>
+    </footer>
+    <script>
+        //ファイル変更で読み込み開始
+        function fileChanged(e) {
+            let input = e.target;
+            const file = input.files[0];
+            const reader = new FileReader();
+            const $msg = $('#message');
+            if (input.files.length == 0) {
+                $msg.text("ファイルが選択できていません。");
+                return;
+            }
+            if (file.type != "text/html") {
+                $msg.text("ファイルがhtmlではありません。");
+                return;
+            }
+            $('#fileNm').text(file.name);
+            $('#downloadList').empty();
+            //ロードされたときの処理
+            reader.onload = () => {
+                let contentArr = [];
+                let headerArr = [];
+                let footerArr = [];
+                let headerFlg = true;
+                let footerFlg = false;
+                let pCnt = 0;
+                let preStr = "";
+                let tabArr = [];
+                let lines = reader.result.split(/\r\n|\n/);
+                //一度ファイルを読み込む
+                for (let i = 0; i < lines.length - 1; i++) {
+                    let line = lines[i];
+                    if (preStr.indexOf("<body>") > -1) {
+                        headerFlg = false;
+                    }
+                    if (line.indexOf("</body>") > -1) {
+                        footerFlg = true;
+                    }
+                    if (!headerFlg && !footerFlg) {
+                        if (line.indexOf("<p ") > -1) {
+                            pCnt = 0;
+                        }
+                        if (pCnt === 1) {
+                            let tabNm = line.match(/\[(.+)\]/)[1];
+                            if (!tabArr.includes(tabNm)) {
+                                tabArr.push(tabNm);
+                            }
+                        }
+                        pCnt++;
+                        contentArr.push(line);
+                    } else if (headerFlg) {
+                        headerArr.push(line);
+                    } else if (footerFlg) {
+                        footerArr.push(line);
+                    }
+                    preStr = line;
+                }
+                for (let i = 0; i < tabArr.length; i++) {
+                    let tempArr = filterTab(tabArr[i], contentArr);
+                    let tempStr = headerArr.join("\n") + "\n" + tempArr.join("\n") + "\n" + footerArr.join("\n");
+                    const blob = new Blob([tempStr], { type: "text/html" });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = tabArr[i] + "_" + file.name;
+                    let newTxt = document.createTextNode(tabArr[i]);
+                    link.appendChild(newTxt);
+                    link.classList.add("link");
+                    let newLi = document.createElement("li");
+                    newLi.appendChild(link);
+                    $('#downloadList').append(newLi);
+                }
+            };
+            //ファイル読み込み
+            reader.readAsText(file);
+        }
+
+        //タブ内容の抽出処理
+        function filterTab(tabNm, contentArr) {
+            let filterArr = [];
+            let tempArr = [];
+            let pCnt = 0;
+            let match = false;
+            for (let i = 0; i < contentArr.length; i++) {
+                let line = contentArr[i];
+                if (line.indexOf("<p ") > -1) {
+                    pCnt = 0;
+                    tempArr = [];
+                }
+                tempArr.push(line);
+                if (pCnt === 1) {
+                    if (line.indexOf(tabNm) > -1) {
+                        match = true;
+                    } else {
+                        match = false;
+                    }
+                }
+                if (line.indexOf("</p>") > -1 && match) {
+                    filterArr = filterArr.concat(tempArr);
+                }
+                pCnt++;
+            }
+            return filterArr;
+        }
+    </script>
+</body>
+</html>
